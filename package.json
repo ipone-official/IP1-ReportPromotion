@@ -1,0 +1,27 @@
+{
+  "name": "ip1-promo-report",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "audit:master": "tsx audit-master.ts",
+    "audit:parse": "tsx audit-parse.ts",
+    "audit:e2e": "tsx audit-e2e.ts"
+  },
+  "dependencies": {
+    "@line/bot-sdk": "^9.5.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mssql": "^12.5.5",
+    "sharp": "^0.34.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/mssql": "^12.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
