@@ -1,6 +1,6 @@
-# Deploy IP1 Promo Report bot บน Windows Server + IIS + PM2
-# ใช้ครั้งแรก:  npm install -g pm2 pm2-windows-startup  &&  pm2-startup install
-# ทุกครั้งหลัง pull:  .\deploy.ps1
+# Deploy IP1 Promo Report bot (Windows Server + IIS + PM2)
+# First time: npm install -g pm2 pm2-windows-startup && pm2-startup install
+# After pull: .\deploy.ps1
 
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
@@ -16,7 +16,7 @@ if (-not (Test-Path ".\dist\index.js")) {
 }
 
 if (-not (Test-Path ".\.env")) {
-  Write-Host "WARNING: .env not found — copy from .env.example and fill in secrets" -ForegroundColor Yellow
+  Write-Host "WARNING: .env not found - copy from .env.example and fill in secrets" -ForegroundColor Yellow
 }
 
 Write-Host "==> pm2 restart" -ForegroundColor Cyan
