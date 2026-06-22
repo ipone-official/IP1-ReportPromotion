@@ -54,21 +54,24 @@ app.get('/photo/:id', (req, res) => {
   res.send(buf);
 });
 
-app.post('/webhook',
-  (req, _res, next) => {
-    console.log(`[webhook] ${new Date().toLocaleTimeString()} มี request เข้ามา`);
+const webhookStack = [
+  (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    console.log(`[webhook] ${new Date().toLocaleTimeString()} ${req.method} ${req.path} — request เข้ามา`);
     const host = req.headers['x-forwarded-host'] || req.headers.host || '';
     const proto = req.headers['x-forwarded-proto'] || 'https';
     if (host) setBaseUrl(`${proto}://${host}`);
     next();
   },
   middleware({ channelSecret }),
-  (req, res) => {
+  (req: express.Request, res: express.Response) => {
     const events: WebhookEvent[] = req.body.events || [];
     console.log(`[webhook] ✓ signature ผ่าน, ${events.length} events: ${events.map((e: any) => e.type).join(',')}`);
     res.sendStatus(200);
     Promise.all(events.map(handleEvent)).catch((e) => console.error('handleEvent error:', e?.message || e));
-  });
+  },
+];
+app.post('/webhook', ...webhookStack);
+app.post('/api/LineWebhook', ...webhookStack);
 
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error('[webhook] ❌ middleware error (signature ไม่ตรง? channel secret ผิด?):', err?.message);
