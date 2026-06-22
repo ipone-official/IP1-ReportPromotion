@@ -1,5 +1,6 @@
 // PM2 config — รันบอท IP1 บน server บริษัท ให้ทำงาน 24/7 + ฟื้นเองถ้าล่ม
-// ต้อง build ก่อน: npm run build   แล้ว: pm2 start ecosystem.config.js
+// Deploy: git pull && .\deploy.ps1
+// IIS app: IP1-Reportpomotion @ https://portal.ip-one.com/IP1-Reportpomotion/webhook
 // (รัน dist/index.js ตรงๆ ด้วย node — ไม่ใช้ npx/tsx เลี่ยงปัญหา .CMD บน Windows)
 module.exports = {
   apps: [
