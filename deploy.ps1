@@ -42,6 +42,6 @@ try {
 
 Write-Host ""
 Write-Host "Deploy done." -ForegroundColor Green
-Write-Host "LINE Webhook URL: https://portal.ip-one.com/IP1-Reportpomotion/webhook"
-Write-Host "PUBLIC_URL (.env): https://portal.ip-one.com/IP1-Reportpomotion"
+Write-Host "LINE Webhook URL: https://portal.ip-one.com/line-promo-bot/webhook"
+Write-Host "PUBLIC_URL (.env): https://portal.ip-one.com/line-promo-bot"
 Write-Host "Logs: pm2 logs ip1promo-bot"
