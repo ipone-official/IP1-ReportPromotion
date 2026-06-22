@@ -19,16 +19,17 @@ if (-not (Test-Path ".\.env")) {
   Write-Host "WARNING: .env not found - copy from .env.example and fill in secrets" -ForegroundColor Yellow
 }
 
-Write-Host "==> pm2 restart" -ForegroundColor Cyan
-pm2 restart ip1promo-bot 2>$null | Out-Null
+Write-Host "==> pm2 start/restart" -ForegroundColor Cyan
+# Use cmd.exe so pm2.ps1 does not throw under $ErrorActionPreference Stop
+cmd /c "pm2 restart ip1promo-bot >nul 2>&1"
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "pm2 process not found, starting..." -ForegroundColor Yellow
-  pm2 start ecosystem.config.js
+  Write-Host "First deploy - starting pm2..." -ForegroundColor Yellow
+  cmd /c "pm2 start ecosystem.config.js"
+  if ($LASTEXITCODE -ne 0) {
+    throw "pm2 start failed - run: npm install -g pm2"
+  }
 }
-if ($LASTEXITCODE -ne 0) {
-  throw "pm2 failed - run: npm install -g pm2"
-}
-pm2 save
+cmd /c "pm2 save"
 
 Write-Host "==> health check localhost:3000" -ForegroundColor Cyan
 Start-Sleep -Seconds 2
