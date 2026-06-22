@@ -1,11 +1,11 @@
 // PM2 config — รันบอท IP1 บน server บริษัท ให้ทำงาน 24/7 + ฟื้นเองถ้าล่ม
-// ใช้: pm2 start ecosystem.config.js   (ดูสเต็ปเต็มใน DEPLOY.md)
+// ต้อง build ก่อน: npm run build   แล้ว: pm2 start ecosystem.config.js
+// (รัน dist/index.js ตรงๆ ด้วย node — ไม่ใช้ npx/tsx เลี่ยงปัญหา .CMD บน Windows)
 module.exports = {
   apps: [
     {
       name: 'ip1promo-bot',
-      script: 'npx',
-      args: 'tsx src/index.ts',
+      script: 'dist/index.js',
       cwd: __dirname,
       autorestart: true,          // ล่ม → ฟื้นเอง
       max_restarts: 20,
