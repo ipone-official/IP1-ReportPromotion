@@ -20,12 +20,13 @@ if (-not (Test-Path ".\.env")) {
 }
 
 Write-Host "==> pm2 restart" -ForegroundColor Cyan
-$pm2List = pm2 jlist 2>$null | ConvertFrom-Json
-$exists = $pm2List | Where-Object { $_.name -eq "ip1promo-bot" }
-if ($exists) {
-  pm2 restart ip1promo-bot
-} else {
+pm2 restart ip1promo-bot 2>$null | Out-Null
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "pm2 process not found, starting..." -ForegroundColor Yellow
   pm2 start ecosystem.config.js
+}
+if ($LASTEXITCODE -ne 0) {
+  throw "pm2 failed - run: npm install -g pm2"
 }
 pm2 save
 
