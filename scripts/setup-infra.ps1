@@ -21,7 +21,9 @@ param(
     # re-download even if the file already exists
     [switch]$Force,
     # Redis Windows build version (tporadowski)
-    [string]$RedisVersion = '5.0.14.1'
+    [string]$RedisVersion = '5.0.14.1',
+    # Meilisearch version -- pinned to match dev exactly. Use 'latest' for newest.
+    [string]$MeiliVersion = '1.48.3'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +38,11 @@ $DataDir  = Join-Path $Root 'data'
 $MeiliDb  = Join-Path $DataDir 'meili'
 $MeiliExe = Join-Path $BinDir 'meilisearch.exe'
 
-$MeiliUrl = 'https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-windows-amd64.exe'
+if ($MeiliVersion -eq 'latest') {
+    $MeiliUrl = 'https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-windows-amd64.exe'
+} else {
+    $MeiliUrl = "https://github.com/meilisearch/meilisearch/releases/download/v$MeiliVersion/meilisearch-windows-amd64.exe"
+}
 $RedisUrl = "https://github.com/tporadowski/redis/releases/download/v$RedisVersion/Redis-x64-$RedisVersion.zip"
 
 function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
@@ -52,7 +58,7 @@ Write-OK "bin  = $BinDir"
 Write-OK "data = $DataDir  (meili db = $MeiliDb)"
 
 # ---- 1) Meilisearch (single exe) ----
-Write-Step 'Download Meilisearch -> bin\meilisearch.exe'
+Write-Step "Download Meilisearch $MeiliVersion -> bin\meilisearch.exe"
 if ((Test-Path $MeiliExe) -and -not $Force) {
     Write-Skip "already exists: $MeiliExe  (use -Force to re-download)"
 } else {
