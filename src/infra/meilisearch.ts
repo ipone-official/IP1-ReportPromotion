@@ -1,20 +1,38 @@
-// @ts-ignore
-import Meili = require('meilisearch');
-const Meilisearch = Meili.Meilisearch;
 import * as D from './master';
+
+// meilisearch@0.58 เป็น ESM-only แต่ tsconfig ใช้ module=CommonJS → static import หรือ
+// dynamic import ธรรมดาจะถูก tsc แปลงเป็น require() แล้วพัง ERR_REQUIRE_ESM ตอนรัน dist จริง.
+// ซ่อน import() ไว้ใน Function() เพื่อให้ tsc ไม่แตะ → คงเป็น native ESM dynamic import ตอนรัน.
+const nativeImport = new Function('s', 'return import(s)') as (s: string) => Promise<any>;
 
 const MEILI_HOST = process.env.MEILI_HOST || 'http://127.0.0.1:7700';
 const MEILI_KEY = process.env.MEILI_MASTER_KEY || 'masterKey123';
 
 let client: any = null;
 let enabled = false;
+let initPromise: Promise<void> | null = null;
 
-try {
-  client = new Meilisearch({ host: MEILI_HOST, apiKey: MEILI_KEY });
-  enabled = true;
-} catch (e: any) {
-  console.warn('Meilisearch: client init failed — running in fallback mode:', e.message);
+function initClient(): Promise<void> {
+  if (!initPromise) {
+    initPromise = nativeImport('meilisearch')
+      .then((mod: any) => {
+        const MeiliSearch =
+          mod.MeiliSearch || mod.Meilisearch ||
+          (mod.default && (mod.default.MeiliSearch || mod.default.Meilisearch)) ||
+          mod.default;
+        client = new MeiliSearch({ host: MEILI_HOST, apiKey: MEILI_KEY });
+        enabled = true;
+      })
+      .catch((e: any) => {
+        enabled = false;
+        console.warn('Meilisearch: client init failed — running in fallback mode:', e.message);
+      });
+  }
+  return initPromise;
 }
+
+// เริ่ม init ทันที (ไม่ block) ให้ enabled พร้อมเร็วที่สุด
+initClient();
 
 export const meiliEnabled = () => enabled;
 
@@ -22,6 +40,7 @@ export const meiliEnabled = () => enabled;
  * Syncs the MSSQL in-memory cache arrays to Meilisearch indices.
  */
 export async function syncMasterToMeilisearch(): Promise<void> {
+  await initClient();
   if (!enabled || !client) return;
   try {
     // 1. Sync Stores
@@ -76,6 +95,7 @@ export async function syncMasterToMeilisearch(): Promise<void> {
 
 
 export async function searchStoreMeili(q: string, limit = 5): Promise<{ account: string; branch: string; score: number }[]> {
+  await initClient();
   if (!enabled || !client) return [];
   try {
     const index = client.index('stores');
@@ -92,6 +112,7 @@ export async function searchStoreMeili(q: string, limit = 5): Promise<{ account:
 
 
 export async function searchBrandMeili(q: string, limit = 5): Promise<string[]> {
+  await initClient();
   if (!enabled || !client || !q || !q.trim()) return [];
   try {
     const res = await client.index('brands').search(q.trim(), { limit });
