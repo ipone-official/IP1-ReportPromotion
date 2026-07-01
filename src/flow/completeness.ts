@@ -15,6 +15,9 @@ export function saveBlockers(s: Session): string[] {
   const hasContent = s.items.length > 0 || !!s.extra?.length || !!(s.rawText && s.rawText.trim());
   if (!hasContent) errs.push('ยังไม่มีเนื้อหา — พิมพ์รายละเอียดมาได้เลย');
   if (s.startDate && s.endDate && s.endDate < s.startDate) errs.push('วันจบต้องไม่ก่อนวันเริ่ม');
+  // Soft warnings: don't block save, but inform user of missing critical data
+  const noBrand = s.items.filter((it) => !it.brand && !it.rawBrand);
+  if (noBrand.length) errs.push(`⚠️ ${noBrand.length} รายการยังไม่มียี่ห้อ`);
   return errs;
 }
 
@@ -72,34 +75,42 @@ export function parseSkipFields(rest: string): { keys: string[]; labels: string[
   return matched ? { keys, labels, blocked } : null;
 }
 
-export function wantedMissing(s: Session): string[] {
-  const out: { k: string; label: string }[] = [];
-  for (const x of missingRequired(s)) out.push({ k: x.step, label: x.label });
-  if (s.account && !s.channel) out.push({ k: 'channel', label: `ช่องทาง (${D.channels.join('/')})` });
-  if (!s.company) out.push({ k: 'company', label: 'บริษัท' });
-  if (!s.startDate) out.push({ k: 'dates', label: 'ช่วงวันที่' });
-  else if (!s.endDate) out.push({ k: 'endDate', label: 'วันจบโปร' });
+export function wantedMissing(s: Session, round?: number): string[] {
+  const critical: { k: string; label: string }[] = [];
+  const optional: { k: string; label: string }[] = [];
+
+  // Critical: always ask
+  for (const x of missingRequired(s)) critical.push({ k: x.step, label: x.label });
+  if (!s.startDate) critical.push({ k: 'dates', label: 'ช่วงวันที่' });
+  else if (!s.endDate) critical.push({ k: 'endDate', label: 'วันจบโปร' });
+  if (!s.company) critical.push({ k: 'company', label: 'บริษัท' });
   const noBrand = s.items.map((it, i) => ({ it, i })).filter((x) => !x.it.brand && !x.it.rawBrand);
-  if (noBrand.length) out.push({ k: 'brand', label: `ยี่ห้อ (รายการที่ ${noBrand.map((x) => x.i + 1).join(', ')})` });
-  const itemField = (k: string, label: string, key: keyof ReportItem) => {
+  if (noBrand.length) critical.push({ k: 'brand', label: `ยี่ห้อ (รายการที่ ${noBrand.map((x) => x.i + 1).join(', ')})` });
+
+  const itemField = (k: string, label: string, key: keyof ReportItem, target: typeof critical) => {
     const miss = s.items.map((it, i) => ({ it, i })).filter((x) => !x.it[key] && !x.it.needsReview);
     if (miss.length) {
       const names = miss.slice(0, 2).map((x) => x.it.brand || x.it.rawBrand || `รายการที่ ${x.i + 1}`).join(', ');
-      out.push({ k, label: `${label} (${names}${miss.length > 2 ? '...' : ''})` });
+      target.push({ k, label: `${label} (${names}${miss.length > 2 ? '...' : ''})` });
     }
   };
-  itemField('detail', 'ราคา/โปร', 'detail');
-  itemField('subCategory', 'ประเภทสินค้า', 'subCategory');
-  itemField('size', 'ขนาด', 'size');
-  itemField('variant', 'กลิ่น/สี', 'variant');
-  itemField('pack', 'แพ็ค', 'pack');
-  if ((D.reportTypesByTopic[s.topicCode || ''] || []).length > 1) itemField('reportType', 'รายการที่จะแจ้ง', 'reportType');
+  // Optional: only ask in round 2+
+  if (s.account && !s.channel) optional.push({ k: 'channel', label: `ช่องทาง (${D.channels.join('/')})` });
+  itemField('subCategory', 'ประเภทสินค้า', 'subCategory', optional);
+  itemField('size', 'ขนาด', 'size', optional);
+  itemField('variant', 'กลิ่น/สี', 'variant', optional);
+  itemField('pack', 'แพ็ค', 'pack', optional);
+  if ((D.reportTypesByTopic[s.topicCode || ''] || []).length > 1) itemField('reportType', 'รายการที่จะแจ้ง', 'reportType', optional);
   const subMiss = s.items.filter((it) => !it.needsReview && it.reportType && !it.reportSubtype && (D.subtypesByReportType[it.reportType] || []).length > 1);
   if (subMiss.length) {
     const names = subMiss.slice(0, 2).map((it) => it.brand || it.rawBrand || '?').join(', ');
-    out.push({ k: 'reportSubtype', label: `รายการย่อย (${names}${subMiss.length > 2 ? '...' : ''})` });
+    optional.push({ k: 'reportSubtype', label: `รายการย่อย (${names}${subMiss.length > 2 ? '...' : ''})` });
   }
-  if (!s.photoCount) out.push({ k: 'photo', label: 'รูปถ่ายหน้างาน (ส่งรูปในแชทมาได้เลย)' });
+  if (!s.photoCount) optional.push({ k: 'photo', label: 'รูปถ่ายหน้างาน (ส่งรูปในแชทมาได้เลย)' });
+
   const skipped = s.skippedFields || [];
-  return out.filter((x) => !skipped.includes(x.k)).map((x) => x.label);
+  const r = round ?? (s.askRounds || 0);
+  // Round 1: critical only. Round 2+: critical + optional
+  const pool = r <= 1 ? critical : [...critical, ...optional];
+  return pool.filter((x) => !skipped.includes(x.k)).map((x) => x.label);
 }

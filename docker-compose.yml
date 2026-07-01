@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ip1-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.9
+    container_name: ip1-meilisearch
+    ports:
+      - "127.0.0.1:7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=masterKey123
+      - MEILI_ENV=development
+    volumes:
+      - meili_data:/meili_data
+    restart: always
+
+volumes:
+  redis_data:
+  meili_data:

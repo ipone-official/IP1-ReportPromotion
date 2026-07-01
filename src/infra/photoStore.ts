@@ -1,14 +1,38 @@
 import { randomBytes } from 'crypto';
+import IORedis from 'ioredis';
+import sharp from 'sharp';
 
-const store = new Map<string, Buffer>();
+const redis = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+// เก็บรูปให้นานพอครอบเวลากรอกจริง (เท่ากับ session TTL 6 ชม.) กันรูปหายก่อนกดบันทึก
+const PHOTO_TTL_SEC = 21600;
 
-export function savePhoto(data: Buffer): string {
+export async function savePhoto(data: Buffer): Promise<string> {
   const key = randomBytes(16).toString('hex');
-  store.set(key, data);
+  let buf = data;
+  try {
+    buf = await sharp(data)
+      .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 75, progressive: true })
+      .toBuffer();
+  } catch (e: any) {
+    console.warn('sharp compression failed:', e.message);
+  }
+  await redis.set(`photo:${key}`, buf, 'EX', PHOTO_TTL_SEC);
   return key;
 }
-export function getPhoto(key: string): Buffer | undefined { return store.get(key); }
-export function deletePhotos(keys: string[]) { for (const k of keys) store.delete(k); }
+
+export async function getPhoto(key: string): Promise<Buffer | null> {
+  const buf = await redis.getBuffer(`photo:${key}`);
+  if (buf) redis.expire(`photo:${key}`, PHOTO_TTL_SEC).catch(() => {});
+  return buf;
+}
+
+export async function deletePhotos(keys: string[]): Promise<void> {
+  if (!keys.length) return;
+  const pipeline = redis.pipeline();
+  for (const k of keys) pipeline.del(`photo:${k}`);
+  await pipeline.exec();
+}
 
 let _baseUrl = '';
 export function setBaseUrl(url: string) { if (url) _baseUrl = url.replace(/\/$/, ''); }

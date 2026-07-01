@@ -12,22 +12,23 @@ GO
 IF OBJECT_ID('dbo.SpInsertReport', 'P') IS NOT NULL DROP PROCEDURE dbo.SpInsertReport;
 GO
 CREATE PROCEDURE dbo.SpInsertReport
-    @line_user_id NVARCHAR(50),
-    @topic        NVARCHAR(100) = NULL,
-    @channel      NVARCHAR(50)  = NULL,
-    @account      NVARCHAR(300) = NULL,
-    @branch       NVARCHAR(200) = NULL,
-    @company      NVARCHAR(200) = NULL,
-    @start_date   DATE          = NULL,
-    @end_date     DATE          = NULL,
-    @note         NVARCHAR(MAX) = NULL,
-    @extra        NVARCHAR(MAX) = NULL
+    @line_user_id     NVARCHAR(50),
+    @topic            NVARCHAR(100) = NULL,
+    @channel          NVARCHAR(50)  = NULL,
+    @account          NVARCHAR(300) = NULL,
+    @branch           NVARCHAR(200) = NULL,
+    @company          NVARCHAR(200) = NULL,
+    @start_date       DATE          = NULL,
+    @end_date         DATE          = NULL,
+    @observation_date DATE          = NULL,   -- Phase 1
+    @note             NVARCHAR(MAX) = NULL,
+    @extra            NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.T_Report (line_user_id, topic, channel, account, branch, company, start_date, end_date, note, extra)
+    INSERT INTO dbo.T_Report (line_user_id, topic, channel, account, branch, company, start_date, end_date, observation_date, note, extra)
     OUTPUT INSERTED.id AS id
-    VALUES (@line_user_id, @topic, @channel, @account, @branch, @company, @start_date, @end_date, @note, @extra);
+    VALUES (@line_user_id, @topic, @channel, @account, @branch, @company, @start_date, @end_date, @observation_date, @note, @extra);
 END
 GO
 
@@ -44,12 +45,24 @@ CREATE PROCEDURE dbo.SpInsertReportItem
     @report_type    NVARCHAR(200) = NULL,
     @report_subtype NVARCHAR(200) = NULL,
     @detail         NVARCHAR(MAX) = NULL,
-    @is_npd         BIT           = 0
+    @item_note      NVARCHAR(MAX) = NULL,
+    @is_npd         BIT           = 0,
+    -- Phase 1: structured promo / competitive-intel fields
+    @is_competitor  BIT           = NULL,
+    @price_normal   DECIMAL(10,2) = NULL,
+    @price_promo    DECIMAL(10,2) = NULL,
+    @discount_pct   DECIMAL(5,2)  = NULL,
+    @promo_type     NVARCHAR(50)  = NULL,
+    @buy_qty        INT           = NULL,
+    @free_qty       INT           = NULL,
+    @threshold_baht DECIMAL(10,2) = NULL,
+    @stock_status   NVARCHAR(20)  = NULL,
+    @facings        INT           = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO dbo.T_Report_Item (report_id, category, sub_category, brand, size, pack, variant, report_type, report_subtype, detail, is_npd)
-    VALUES (@report_id, @category, @sub_category, @brand, @size, @pack, @variant, @report_type, @report_subtype, @detail, @is_npd);
+    INSERT INTO dbo.T_Report_Item (report_id, category, sub_category, brand, size, pack, variant, report_type, report_subtype, detail, item_note, is_npd, is_competitor, price_normal, price_promo, discount_pct, promo_type, buy_qty, free_qty, threshold_baht, stock_status, facings)
+    VALUES (@report_id, @category, @sub_category, @brand, @size, @pack, @variant, @report_type, @report_subtype, @detail, @item_note, @is_npd, @is_competitor, @price_normal, @price_promo, @discount_pct, @promo_type, @buy_qty, @free_qty, @threshold_baht, @stock_status, @facings);
 END
 GO
 
@@ -57,9 +70,9 @@ IF OBJECT_ID('dbo.SpInsertReportPhoto', 'P') IS NOT NULL DROP PROCEDURE dbo.SpIn
 GO
 CREATE PROCEDURE dbo.SpInsertReportPhoto
     @report_id  BIGINT,
-    @photo_data VARBINARY(MAX) = NULL,
-    @photo_type NVARCHAR(20)   = NULL,
-    @item_index INT            = NULL
+    @photo_data NVARCHAR(MAX) = NULL,
+    @photo_type NVARCHAR(20)  = NULL,
+    @item_index INT           = NULL
 AS
 BEGIN
     SET NOCOUNT ON;

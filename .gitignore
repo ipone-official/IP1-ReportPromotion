@@ -2,10 +2,16 @@
 node_modules/
 dist/
 
+# ===== in-project infra binaries + runtime data (โหลดด้วย scripts\setup-infra.ps1) =====
+bin/*.exe
+bin/redis/*
+!bin/redis/redis.conf
+data/
+
 # ===== secrets (ห้าม push เด็ดขาด) =====
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # ===== logs =====
 *.log
@@ -13,8 +19,14 @@ dist/
 *.out.log
 
 # ===== dev scratch / probe / harness (ไม่เกี่ยวกับการ deploy) =====
-scripts/
+scripts/*
+!scripts/setup-infra.ps1
+scratch/
 _analysis/
+
+# ===== runtime uploads + service temp (ห้ามขึ้น repo — ข้อมูล user / ไฟล์ชั่วคราว) =====
+uploads/
+services/
 benchmark.ts
 bench-results.json
 data.json

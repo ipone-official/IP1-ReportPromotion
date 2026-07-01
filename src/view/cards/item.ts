@@ -69,6 +69,16 @@ export function itemBubbleBody(p: ReportItem, i: number): any[] {
     specCell(i, 'reportSubtype', 'รายการย่อย', p.reportSubtype),
   ];
   for (let k = 0; k < cells.length; k += 2) rows.push(specGrid(cells[k], cells[k + 1]));
+  // itemNote — full-width compact row at the bottom
+  const hasNote = !!(p.itemNote && String(p.itemNote).trim());
+  rows.push({
+    type: 'box', layout: 'vertical', margin: 'sm', paddingTop: '4px', paddingBottom: '4px',
+    action: { type: 'postback', data: JSON.stringify({ s: 'edititemfield', i, f: 'itemNote' }) },
+    contents: [
+      { type: 'text', text: 'รายละเอียดสินค้า', size: 'xxs', color: G.sub },
+      { type: 'text', text: hasNote ? String(p.itemNote) : '+ เพิ่ม', size: 'sm', weight: 'bold', color: hasNote ? G.text : G.green, wrap: true, maxLines: 3 },
+    ],
+  });
   return rows;
 }
 
@@ -77,7 +87,7 @@ export function productsHeader(total: number, page: number, totalPages: number):
   return {
     type: 'box', layout: 'vertical', backgroundColor: G.card, paddingStart: '16px', paddingEnd: '16px', paddingTop: '14px', paddingBottom: '2px',
     contents: [
-      { type: 'box', layout: 'horizontal', alignItems: 'center', contents: [{ type: 'text', text: 'รายการสินค้า', size: 'lg', weight: 'bold', color: G.text, flex: 1 }, ...right] },
+      { type: 'box', layout: 'horizontal', alignItems: 'center', spacing: 'sm', contents: [{ type: 'box', layout: 'vertical', width: '5px', height: '22px', backgroundColor: G.accent, cornerRadius: '3px', flex: 0, contents: [{ type: 'filler' }] }, { type: 'text', text: 'รายการสินค้า', size: 'lg', weight: 'bold', color: G.text, flex: 1 }, ...right] },
       { type: 'text', text: 'แตะที่ช่องเพื่อแก้ไขได้เลย', size: 'xxs', color: G.green, margin: 'xs' },
     ],
   };
@@ -96,6 +106,7 @@ export function emptyProductTemplate(): any[] {
     F('brand', 'ยี่ห้อ'), F('category', 'กลุ่มสินค้า'), F('subCategory', 'ประเภท'),
     F('size', 'ไซส์'), F('pack', 'แพ็ค'), F('variant', 'กลิ่น/สี'),
     F('reportType', 'รายการที่จะแจ้ง'), F('reportSubtype', 'รายการย่อย'), F('detail', 'ราคา/โปร'),
+    F('itemNote', 'รายละเอียดสินค้า'),
   ];
   const rows: any[] = [];
   for (let k = 0; k < fields.length; k += 2) rows.push({ type: 'box', layout: 'horizontal', spacing: 'md', margin: 'sm', contents: [fields[k], fields[k + 1] || { type: 'box', layout: 'vertical', flex: 1, contents: [{ type: 'filler' }] }] });

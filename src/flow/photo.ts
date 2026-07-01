@@ -3,12 +3,13 @@ import { savePhoto, deletePhotos } from '../infra/photoStore';
 import { summaryFlex, text } from '../view/cards';
 import { ask, continueLoop } from './nav';
 
-export function onImage(s: Session, photo?: { data: Buffer; type: string }): any[] {
+export async function onImage(s: Session, photo?: { data: Buffer; type: string }): Promise<any[]> {
   if (!photo) {
     if (s.step === 'photo') return [text('ดึงรูปจาก LINE ไม่สำเร็จ กรุณาส่งรูปอีกครั้งครับ'), ...ask(s, 'photo')];
     return [text('ดึงรูปจาก LINE ไม่สำเร็จ กรุณาส่งรูปอีกครั้งครับ')];
   }
-  (s.photoKeys = s.photoKeys || []).push(savePhoto(photo.data));
+  const key = await savePhoto(photo.data);
+  (s.photoKeys = s.photoKeys || []).push(key);
   s.photoCount = s.photoKeys.length;
   if (s.askingMore) {
     const next = continueLoop(s);
@@ -18,10 +19,10 @@ export function onImage(s: Session, photo?: { data: Buffer; type: string }): any
   return [];
 }
 
-export function onDelReportPhoto(s: Session, photoIndex: number): any[] {
+export async function onDelReportPhoto(s: Session, photoIndex: number): Promise<any[]> {
   const keys = s.photoKeys || [];
   const key = keys[photoIndex];
-  if (key) deletePhotos([key]);
+  if (key) await deletePhotos([key]);
   s.photoKeys = keys.filter((_, j) => j !== photoIndex);
   s.photoCount = s.photoKeys.length;
   s.step = 'summary';

@@ -24,38 +24,49 @@ export function promptText(step: string, s: Session): string {
   return map[step] || step;
 }
 
-export function selectCard(step: string, s: Session, opts: string[], subtitle?: string, clearData?: any, editMode?: boolean): any {
+function legacyMultiSelectCard(step: string, s: Session, opts: string[], selected: string[], subtitle?: string): any {
   const title = FIELD_TITLE[step] || step;
+  const selectedSet = new Set(selected);
   const MAX_PER = 6;
   const mkRows = (page: string[]): any[] => {
     const rows: any[] = [];
     page.forEach((o, i) => {
+      const picked = selectedSet.has(o);
       if (i > 0) rows.push({ type: 'separator', color: G.line });
-      rows.push(optionRow(o, { s: step, v: o }));
+      rows.push({
+        type: 'box', layout: 'horizontal', paddingTop: '6px', paddingBottom: '6px', paddingStart: '14px', paddingEnd: '14px', spacing: 'sm', alignItems: 'center',
+        action: { type: 'postback', data: JSON.stringify({ s: 'togglesubtype', v: o }), displayText: o },
+        contents: [
+          { type: 'text', text: picked ? '✓' : '＋', size: 'sm', color: picked ? G.green : G.faint, weight: 'bold', flex: 0, gravity: 'center' },
+          { type: 'text', text: o, size: 'sm', color: G.text, weight: 'bold', flex: 1, wrap: true, gravity: 'center' },
+        ],
+      });
     });
     return rows;
   };
+  const selectedText = selected.length ? `เลือกแล้ว: ${selected.join(', ')}` : 'กดเลือกได้หลายรายการ หรือพิมพ์หลายรายการคั่นด้วย comma/ขึ้นบรรทัดใหม่';
   const mkBubble = (page: string[], progress?: string): any => ({
     type: 'bubble', size: 'kilo',
-    header: cardHeader(title, subtitle ?? fieldSubtitle(step, s), progress),
+    header: cardHeader(title, subtitle || selectedText, progress),
     body: { type: 'box', layout: 'vertical', paddingAll: '0px', contents: mkRows(page) },
-    footer: navFooter(clearData, editMode ?? (subtitle != null)),
+    footer: {
+      type: 'box', layout: 'vertical', spacing: 'xs', paddingAll: '8px',
+      contents: [
+        { type: 'button', style: 'primary', color: G.green, height: 'sm', action: { type: 'postback', label: 'เสร็จแล้ว', data: JSON.stringify({ s: 'subtypedone' }), displayText: 'เสร็จแล้ว' } },
+        {
+          type: 'box', layout: 'horizontal', spacing: 'sm',
+          contents: [
+            { type: 'button', style: 'link', height: 'sm', color: G.warn, action: { type: 'postback', label: 'ล้าง', data: JSON.stringify({ s: 'subtypeclear' }), displayText: 'ล้างรายการย่อย' } },
+            { type: 'button', style: 'link', height: 'sm', color: G.sub, action: { type: 'postback', label: 'ย้อนกลับ', data: JSON.stringify({ s: 'back' }), displayText: 'ย้อนกลับ' } },
+          ],
+        },
+      ],
+    },
     styles: { footer: { separator: true } },
   });
-  if (opts.length <= MAX_PER) {
-    return { type: 'flex', altText: title, contents: mkBubble(opts, stepProgress(step)) };
-  }
+  if (opts.length <= MAX_PER) return { type: 'flex', altText: title, contents: mkBubble(opts, stepProgress(step)) };
   const nPages = Math.ceil(opts.length / MAX_PER);
-  const base = Math.floor(opts.length / nPages);
-  const extra = opts.length % nPages;
-  const pages: string[][] = [];
-  let idx = 0;
-  for (let p = 0; p < nPages; p++) {
-    const size = base + (p >= nPages - extra ? 1 : 0);
-    pages.push(opts.slice(idx, idx + size));
-    idx += size;
-  }
-  const bubbles = pages.map((page, p) => mkBubble(page, `${p + 1}/${nPages}`));
+  const bubbles = Array.from({ length: nPages }, (_, p) => mkBubble(opts.slice(p * MAX_PER, p * MAX_PER + MAX_PER), `${p + 1}/${nPages}`));
   return { type: 'flex', altText: title, contents: { type: 'carousel', contents: bubbles } };
 }
 
@@ -211,6 +222,10 @@ export function dateCard(_step: 'startDate' | 'endDate', s?: Session): any {
           {
             type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'sm',
             contents: [chip('เลือกวันเริ่ม', startPicker, true), chip('เลือกวันจบ', endPicker, false)],
+          },
+          {
+            type: 'box', layout: 'horizontal', spacing: 'xs', margin: 'xs',
+            contents: [chip('ไม่มีวันจบ (โปรต่อเนื่อง)', { type: 'postback', label: 'ไม่มีวันจบ', data: JSON.stringify({ s: 'noend' }), displayText: 'ไม่มีวันจบ' }, false)],
           },
         ],
       },

@@ -1,8 +1,10 @@
 
 
+
 export interface ReportItem {
   category?: string;
   subCategory?: string;
+  rawSubCategory?: string;
   brand?: string;
   rawBrand?: string;
   needsReview?: boolean;
@@ -10,10 +12,24 @@ export interface ReportItem {
   size?: string;
   pack?: string;
   variant?: string;
+  rawVariant?: string;
+  rawReportSubtype?: string;
   reportType?: string;
   reportSubtype?: string;
   detail?: string;
+  itemNote?: string;
   approx?: string[];
+  // Phase 1: field ใหม่ (AI สกัดใน Phase 3 — ตอนนี้ optional, save เป็น null ได้)
+  isCompetitor?: boolean;      // ของเรา / คู่แข่ง
+  priceNormal?: number;        // ราคาปกติ
+  pricePromo?: number;         // ราคาโปร
+  discountPct?: number;        // %ลด (คำนวณ)
+  promoType?: string;          // กลไกโปร: discount | buy_x_get_y | threshold_gift | ...
+  buyQty?: number;
+  freeQty?: number;
+  thresholdBaht?: number;
+  stockStatus?: string;        // มี / ของหมด
+  facings?: number;            // จำนวน facing (display)
 }
 
 export type Session = {
@@ -32,6 +48,7 @@ export type Session = {
   items: ReportItem[];
   startDate?: string;
   endDate?: string;
+  observationDate?: string;    // Phase 1: วันที่สังเกตหน้างาน (ต่างจากวันโปร)
   photoCount: number;
   photoKeys?: string[];
   lastSeen?: number;
@@ -52,4 +69,11 @@ export type Session = {
   lastBotInteract?: number;
   approx?: string[];
   savedReportId?: number;
+  typedStore?: string;
+  typedBrand?: string;
+  typedVariant?: string;
+  typedSubCategory?: string;
+  typedCompany?: string;
+  typedReportSubtype?: string;
+  reportSubtypeSelections?: string[];
 };

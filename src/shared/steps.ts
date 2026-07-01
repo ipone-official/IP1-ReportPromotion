@@ -1,6 +1,6 @@
 
 export const STORE_STEPS = ['topic', 'channel', 'account', 'branch', 'company'];
-export const PRODUCT_STEPS = ['category', 'subCategory', 'brand', 'size', 'pack', 'variant', 'reportType', 'reportSubtype', 'detail'];
+export const PRODUCT_STEPS = ['category', 'subCategory', 'brand', 'size', 'pack', 'variant', 'reportType', 'reportSubtype'];
 export const CLOSING_STEPS = ['startDate', 'endDate', 'photo'];
 
 export const ORDER = [...STORE_STEPS, ...PRODUCT_STEPS, 'addMore', ...CLOSING_STEPS, 'summary'];
@@ -17,6 +17,7 @@ export const FIELD_TITLE: Record<string, string> = {
   subCategory: 'ประเภทสินค้า', brand: 'ยี่ห้อ', size: 'ไซส์', pack: 'แพ็ค',
   variant: 'กลิ่น / สี / รสชาติ', addMore: 'เพิ่มสินค้า',
   reportType: 'รายการที่จะแจ้ง', reportSubtype: 'รายการย่อย',
+  itemNote: 'รายละเอียดสินค้า',
   startDate: 'วันเริ่มรายการ', endDate: 'วันจบรายการ',
   product: 'สินค้า + โปร (กรอกใหม่)',
 };

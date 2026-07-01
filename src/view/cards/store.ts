@@ -3,7 +3,7 @@ import { cardHeader, navFooter, optionRow } from './base';
 
 export function didYouMeanCard(typed: string, accounts: string[]): any {
   const rows: any[] = [];
-  accounts.forEach((acc, i) => {
+  accounts.slice(0, 5).forEach((acc, i) => {
     if (i) rows.push({ type: 'separator', color: G.line });
     rows.push(optionRow(acc, { s: 'account', v: acc }));
   });
@@ -27,7 +27,7 @@ export function didYouMeanCard(typed: string, accounts: string[]): any {
 
 export function branchDidYouMeanCard(typed: string, branches: string[], account: string): any {
   const rows: any[] = [];
-  branches.forEach((br, i) => {
+  branches.slice(0, 5).forEach((br, i) => {
     if (i) rows.push({ type: 'separator', color: G.line });
     rows.push(optionRow(br, { s: 'storepick', a: account, b: br }));
   });
@@ -46,7 +46,7 @@ export function branchDidYouMeanCard(typed: string, branches: string[], account:
 
 export function storeSelectCard(cands: { account: string; branch: string }[], typed?: string): any {
   const body: any[] = [];
-  cands.forEach((c, i) => {
+  cands.slice(0, 5).forEach((c, i) => {
     if (i) body.push({ type: 'separator', color: G.line });
     const main = c.branch || c.account;
     const contents: any[] = [{ type: 'text', text: main, size: 'md', color: G.text, weight: 'bold', wrap: true }];

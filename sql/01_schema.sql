@@ -94,6 +94,7 @@ CREATE TABLE dbo.T_Report (
     company      NVARCHAR(200) NULL,
     start_date   DATE          NULL,
     end_date     DATE          NULL,
+    observation_date DATE      NULL,
     note         NVARCHAR(MAX) NULL,
     status       NVARCHAR(20)  NULL DEFAULT 'submitted',
     created_at   DATETIME2     NULL DEFAULT SYSDATETIME(),
@@ -114,7 +115,19 @@ CREATE TABLE dbo.T_Report_Item (
     report_type    NVARCHAR(200) NULL,
     report_subtype NVARCHAR(200) NULL,
     detail         NVARCHAR(MAX) NULL,
-    is_npd         BIT           NULL DEFAULT 0
+    item_note      NVARCHAR(MAX) NULL,
+    is_npd         BIT           NULL DEFAULT 0,
+    -- Phase 1: structured promo / competitive-intel
+    is_competitor  BIT           NULL,
+    price_normal   DECIMAL(10,2) NULL,
+    price_promo    DECIMAL(10,2) NULL,
+    discount_pct   DECIMAL(5,2)  NULL,
+    promo_type     NVARCHAR(50)  NULL,
+    buy_qty        INT           NULL,
+    free_qty       INT           NULL,
+    threshold_baht DECIMAL(10,2) NULL,
+    stock_status   NVARCHAR(20)  NULL,
+    facings        INT           NULL
 );
 GO
 
@@ -122,7 +135,7 @@ IF OBJECT_ID('dbo.T_Report_Photo','U') IS NULL
 CREATE TABLE dbo.T_Report_Photo (
     id          BIGINT IDENTITY(1,1) PRIMARY KEY,
     report_id   BIGINT         NULL,
-    photo_data  VARBINARY(MAX) NULL,
+    photo_data  NVARCHAR(MAX)  NULL,
     photo_type  NVARCHAR(20)   NULL,
     uploaded_at DATETIME2      NULL DEFAULT SYSDATETIME(),
     item_index  INT            NULL

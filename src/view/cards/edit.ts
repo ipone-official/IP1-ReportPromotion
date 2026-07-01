@@ -97,6 +97,7 @@ export function itemActionCard(s: Session, i: number): any {
           itemFieldButton(i, 'size', 'ขนาด', p.size),
           itemFieldButton(i, 'variant', 'กลิ่น/สี', p.variant),
           itemFieldButton(i, 'brand', 'ยี่ห้อ', p.brand || p.rawBrand),
+          itemFieldButton(i, 'itemNote', 'รายละเอียดสินค้า', p.itemNote),
           { type: 'button', style: 'link', height: 'sm', action: { type: 'postback', label: 'ช่องอื่นๆ (แพ็ค/ประเภท/รายการ)', data: JSON.stringify({ s: 'edititemmore', i }) } },
           { type: 'separator', margin: 'sm', color: G.line },
           { type: 'button', style: 'link', height: 'sm', action: { type: 'postback', label: 'พิมพ์ใหม่ทั้งรายการ', data: JSON.stringify({ s: 'edititemtype', v: String(i) }) } },
@@ -116,6 +117,7 @@ export function itemFieldPicker(s: Session, i: number): any {
     { f: 'category', label: 'กลุ่มสินค้า', val: p.category },
     { f: 'reportType', label: 'รายการที่จะแจ้ง', val: p.reportType },
     { f: 'reportSubtype', label: 'รายการย่อย', val: p.reportSubtype },
+    { f: 'itemNote', label: 'รายละเอียดสินค้า', val: p.itemNote },
   ];
   const rows: any[] = [];
   fields.forEach((fl, idx) => {

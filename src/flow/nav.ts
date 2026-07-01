@@ -2,7 +2,8 @@ import * as D from '../infra/master';
 import { ORDER, PRODUCT_STEPS } from '../shared/steps';
 import { Session, ReportItem } from '../shared/types';
 import { firstMissing, wantedMissing } from './completeness';
-import { selectCard, searchCard, dateCard, photoCard, detailCard, summaryFlex, topicPickCard, storeSelectCard, askMoreText, text } from '../view/cards';
+import { selectCard, multiSelectCard, searchCard, dateCard, photoCard, detailCard, summaryFlex, topicPickCard, storeSelectCard, askMoreText, text } from '../view/cards';
+import { matchMaster } from '../domain/match';
 
 export function nextOf(step: string): string {
   return ORDER[ORDER.indexOf(step) + 1];
@@ -11,6 +12,10 @@ export function nextOf(step: string): string {
 export const MAX_BUTTONS = 25;
 
 export const ASK_OPTIONAL_LOOP = false;
+
+export function splitMultiValue(value?: string): string[] {
+  return String(value || '').split(/[,，\n/]+/).map((x) => x.trim()).filter(Boolean);
+}
 
 export function afterField(s: Session, step: string): any[] {
   if (s.fillingMissing || s.askingMore) {
@@ -23,6 +28,9 @@ export function afterField(s: Session, step: string): any[] {
   }
   if (s.editing && step === 'account') return ask(s, 'branch');
   if (s.editing && !PRODUCT_STEPS.includes(step)) { s.editing = false; return ask(s, 'summary'); }
+  // กด "เสร็จแล้ว" ที่รายการย่อย (ฟิลด์สุดท้าย) → ไปการ์ดสรุปเลย
+  // (ไม่เด้งไป "เพิ่มสินค้า" และไม่ไปวันที่ — เพิ่มสินค้า/ใส่วันที่ทำจากการ์ดสรุปได้)
+  if (step === 'reportSubtype' && !s.editing && !s.editTarget) return ask(s, 'summary');
   return ask(s, nextOf(step));
 }
 
@@ -63,7 +71,7 @@ export function optionsForItem(field: string, s: Session, item: ReportItem): str
 export const withOther = (list: string[]): string[] => (list.length && !list.includes('อื่นๆ')) ? [...list, 'อื่นๆ'] : list;
 
 export function ask(s: Session, step: string): any[] {
-  s.editTarget = undefined;
+  if (!(step === 'reportSubtype' && s.editTarget?.field === 'reportSubtype')) s.editTarget = undefined;
   s.step = step;
   let msg: any[];
   if (step === 'detail') {
@@ -81,6 +89,11 @@ export function ask(s: Session, step: string): any[] {
       if (step === 'branch' && s.account) { s.awaitingText = 'branch'; msg = [searchCard('branch', s, 0, undefined, clr, s.editing)]; }
       else if (step === 'branch') return [text('กรุณาเลือกห้าง/ร้านก่อน แล้วจึงเลือกสาขาครับ'), ...ask(s, 'account')];
       else return ask(s, nextOf(step));
+    } else if (step === 'reportSubtype') {
+      s.awaitingText = 'reportSubtype';
+      const picked = s.reportSubtypeSelections?.length ? s.reportSubtypeSelections : splitMultiValue(s.current.reportSubtype);
+      s.reportSubtypeSelections = picked;
+      msg = [multiSelectCard(step, s, opts as string[], picked)];
     } else if (opts && opts.length > MAX_BUTTONS) {
       s.awaitingText = step;
       msg = [searchCard(step, s, opts.length, undefined, clr, s.editing)];
@@ -89,6 +102,35 @@ export function ask(s: Session, step: string): any[] {
     }
   }
   if (s.asked[s.asked.length - 1] !== step) s.asked.push(step);
+
+  const getTypedVal = (s: Session, step: string): string | undefined => {
+    if (step === 'account' || step === 'branch') return s.typedStore;
+    if (step === 'brand') return s.typedBrand;
+    if (step === 'variant') return s.typedVariant;
+    if (step === 'subCategory') return s.typedSubCategory;
+    if (step === 'company') return s.typedCompany;
+    if (step === 'reportSubtype') return s.typedReportSubtype;
+    return undefined;
+  };
+  const typedVal = getTypedVal(s, step);
+  if (typedVal && msg && msg[0]) {
+    const opts = optionsFor(step, s) || [];
+    const m = matchMaster(typedVal, opts.filter((o) => o !== 'อื่นๆ'));
+    if (m.candidates && m.candidates.length > 0) {
+      msg[0].quickReply = {
+        items: m.candidates.slice(0, 5).map((c) => ({
+          type: 'action',
+          action: {
+            type: 'postback',
+            label: c.value,
+            data: JSON.stringify({ s: step, v: c.value }),
+            displayText: c.value,
+          },
+        })),
+      };
+    }
+  }
+
   return msg;
 }
 
@@ -119,7 +161,7 @@ export function continueLoop(s: Session): any[] | null {
   if (!s.items.length && !s.extra?.length) { s.askingMore = true; return [text('กรุณาพิมพ์รายละเอียดรายงานได้เลยครับ')]; }
   if (!s.skipMore && ASK_OPTIONAL_LOOP) {
     const miss = wantedMissing(s);
-    if (miss.length && (s.askRounds || 0) < 3) { s.askRounds = (s.askRounds || 0) + 1; s.askingMore = true; s.pendingFields = miss; return [askMoreText(miss)]; }
+    if (miss.length && (s.askRounds || 0) < 2) { s.askRounds = (s.askRounds || 0) + 1; s.askingMore = true; s.pendingFields = miss; return [askMoreText(miss)]; }
   }
   s.askingMore = false; s.step = 'summary'; s.pendingFields = undefined;
   return null;

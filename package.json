@@ -4,16 +4,23 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/worker.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "worker": "node dist/worker.js",
     "audit:master": "tsx audit-master.ts",
     "audit:parse": "tsx audit-parse.ts",
-    "audit:e2e": "tsx audit-e2e.ts"
+    "audit:e2e": "tsx audit-e2e.ts",
+    "audit:accuracy": "tsx eval-accuracy.ts",
+    "promote:brands": "tsx promote-brands.ts"
   },
   "dependencies": {
     "@line/bot-sdk": "^9.5.0",
+    "bullmq": "^5.79.1",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "ioredis": "^5.11.1",
+    "meilisearch": "^0.58.0",
     "mssql": "^12.5.5",
     "sharp": "^0.34.5",
     "xlsx": "^0.18.5"

@@ -1,0 +1,39 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      rampTo: 30
+      name: Warm up phase (ramp up to 30 req/s)
+    - duration: 60
+      arrivalRate: 30
+      name: Sustained load phase (30 req/s)
+    - duration: 10
+      arrivalRate: 50
+      name: Peak stress phase (50 req/s)
+  payload:
+    path: "artillery-payloads.csv"
+    fields:
+      - "userId"
+      - "text"
+      - "eventId"
+scenarios:
+  - name: "Simulate LINE Webhook Ingest"
+    flow:
+      - post:
+          url: "/webhook"
+          json:
+            destination: "U1234567890abcdef1234567890abcde"
+            events:
+              - type: "message"
+                message:
+                  type: "text"
+                  id: "msg_{{ eventId }}"
+                  text: "{{ text }}"
+                timestamp: 1627582851234
+                source:
+                  type: "user"
+                  userId: "{{ userId }}"
+                replyToken: "reply_{{ eventId }}"
+                mode: "active"
+                webhookEventId: "evt_{{ eventId }}"

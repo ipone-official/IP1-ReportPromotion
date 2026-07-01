@@ -1,8 +1,11 @@
 import * as AI from '../infra/ai';
+import * as D from '../infra/master';
 import { Session, ReportItem } from '../shared/types';
 import { buildItem, setItemField, itemDesc, splitVariantItems } from '../domain/items';
-import { ask, afterField, optionsForItem, MAX_BUTTONS } from './nav';
-import { summaryFlex, productEditPicker, itemActionCard, itemFieldPicker, editPicker, selectCard, searchCard, promptCard, text, extraEditCard } from '../view/cards';
+import { ask, afterField, optionsForItem, MAX_BUTTONS, splitMultiValue } from './nav';
+import { summaryFlex, productEditPicker, itemActionCard, itemFieldPicker, editPicker, selectCard, multiSelectCard, searchCard, promptCard, text, extraEditCard } from '../view/cards';
+import { insertMatchAlias } from '../infra/db';
+import { addAlias, norm } from '../domain/match';
 
 export function onEdit(): any[] {
   return [editPicker()];
@@ -83,7 +86,7 @@ export function onAddItemField(s: Session, field: string): any[] {
 export async function editItemFromText(s: Session, x: string): Promise<any[]> {
   s.rawText = (s.rawText ? s.rawText + '\n' : '') + x;
   let p: any;
-  try { p = await AI.parseReport(x); } catch { return [text('ขออภัยครับ ระบบประมวลผลขัดข้องชั่วคราว กรุณาพิมพ์ใหม่อีกครั้ง')]; }
+  try { p = await AI.parseReport(x, undefined, undefined, s.topicCode); } catch { return [text('ขออภัยครับ ระบบประมวลผลขัดข้องชั่วคราว กรุณาพิมพ์ใหม่อีกครั้ง')]; }
   const newItems = splitVariantItems(p.items || []).map((it: any) => buildItem(it, s.topicCode || '', x));
   const idx = s.editItemIndex; s.editItemIndex = undefined;
   if (!newItems.length) return [text('ไม่พบรายการสินค้าในข้อความครับ กรุณาพิมพ์ใหม่อีกครั้ง เช่น "[ยี่ห้อ] [ขนาด] [ราคา/โปร]"')];
@@ -102,6 +105,7 @@ export const ITEM_FIELD_LABEL: Record<string, string> = {
 
 export function clearEditTarget(s: Session) {
   s.editTarget = undefined;
+  s.reportSubtypeSelections = undefined;
   if (s.awaitingText === 'itemfield') s.awaitingText = undefined;
 }
 
@@ -123,6 +127,12 @@ export function onEditItemField(s: Session, i: number, field: string, value?: st
     return [promptCard(`แก้${label}`, `${itemDesc(item)}${cur ? `\nเดิม: ${cur}` : ''}\nพิมพ์${label}ใหม่ได้เลยครับ`, clr)];
   }
   const sub = `${itemDesc(item)}${cur ? ` · เดิม: ${cur}` : ''}`;
+  if (field === 'reportSubtype') {
+    s.awaitingText = 'itemfield';
+    const picked = s.reportSubtypeSelections?.length ? s.reportSubtypeSelections : splitMultiValue(cur);
+    s.reportSubtypeSelections = picked;
+    return [multiSelectCard(field, s, opts, picked, sub)];
+  }
   if (opts.length > MAX_BUTTONS) { // ลิสต์ใหญ่ (เช่นยี่ห้อ) → ค้นด้วยพิมพ์
     s.awaitingText = 'itemfield';
     return [searchCard(field, s, opts.length, sub, clr)];
@@ -139,6 +149,40 @@ export function onEditItemMore(s: Session, i: number): any[] {
 export function applyItemFieldValue(s: Session, i: number, field: string, value: string): any[] {
   const item = s.items[i];
   if (!item) { clearEditTarget(s); return [productEditPicker(s)]; }
+  
+  if (value) {
+    const valTrim = value.trim();
+    if (field === 'brand' && item.rawBrand) {
+      const rawVal = item.rawBrand.trim();
+      if (rawVal && norm(rawVal) !== norm(valTrim)) {
+        insertMatchAlias('brand', rawVal, valTrim, 'user-correction');
+        addAlias(rawVal, valTrim, 'brand');
+        D.aliasRows.push({ kind: 'brand', alias: rawVal, canonical: valTrim });
+      }
+    } else if (field === 'variant' && item.rawVariant) {
+      const rawVal = item.rawVariant.trim();
+      if (rawVal && norm(rawVal) !== norm(valTrim)) {
+        insertMatchAlias('variant_cluster', rawVal, valTrim, 'user-correction');
+        addAlias(rawVal, valTrim, 'variant_cluster');
+        D.aliasRows.push({ kind: 'variant_cluster', alias: rawVal, canonical: valTrim });
+      }
+    } else if (field === 'subCategory' && item.rawSubCategory) {
+      const rawVal = item.rawSubCategory.trim();
+      if (rawVal && norm(rawVal) !== norm(valTrim)) {
+        insertMatchAlias('subcat_keyword', rawVal, valTrim, 'user-correction');
+        addAlias(rawVal, valTrim, 'subcat_keyword');
+        D.aliasRows.push({ kind: 'subcat_keyword', alias: rawVal, canonical: valTrim });
+      }
+    } else if (field === 'reportSubtype' && item.rawReportSubtype) {
+      const rawVal = item.rawReportSubtype.trim();
+      if (rawVal && norm(rawVal) !== norm(valTrim)) {
+        insertMatchAlias('subtype', rawVal, valTrim, 'user-correction');
+        addAlias(rawVal, valTrim, 'subtype');
+        D.aliasRows.push({ kind: 'subtype', alias: rawVal, canonical: valTrim });
+      }
+    }
+  }
+
   setItemField(item, field, value, s.topicCode || '');
   clearEditTarget(s);
   s.step = 'summary';
@@ -148,6 +192,10 @@ export function applyItemFieldValue(s: Session, i: number, field: string, value:
 export function applyItemFieldText(s: Session, x: string): any[] {
   const t = s.editTarget;
   if (!t) { clearEditTarget(s); return [summaryFlex(s)]; }
+  if (t.field === 'reportSubtype') {
+    const values = splitMultiValue(x);
+    if (values.length > 1) return applyItemFieldValue(s, t.i, t.field, values.join(', '));
+  }
   return applyItemFieldValue(s, t.i, t.field, x);
 }
 
